@@ -1,10 +1,32 @@
-pipeline { // Root of pipeline
-    agent { docker { image'python:3.5.1' } } // Pipeline steps run inside this container
+pipeline {
+    agent any
+    
+    options {
+        skipDefaultCheckout(true)
+    }
+    
     stages {
-        stage('build') { // Parts of pipeline
-            steps { // Commands inside
-                sh 'pip --version' // Shell commands <v
-                sh 'python --version'
+        stage("Clone") {
+            steps {
+                echo "Cloning code"
+                git url: "https://github.com/Ath-Alt/tripcraft.git", branch: "master"
+            }
+        }
+        
+        stage("Build") {
+            steps {
+                echo "Building image"
+                sh "docker build -t athalt/tripcraft ."
+            }
+        }
+        
+        stage("Push") {
+            steps {
+                echo "Pushing to DockerHub"
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "dockerHubPass", usernameVariable: "dockerHubUser")]) {
+                    sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
+                    sh "docker push ${env.dockerHubUser}/tripcraft"
+                }
             }
         }
     }
